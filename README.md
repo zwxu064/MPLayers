@@ -1,5 +1,5 @@
 # Related Publication
-- This work is accepted as an oral paper on ACCV 20202. If you find our paper or code useful, please cite our work as follows.
+- This work is accepted as an oral paper on ACCV 2020. If you find our paper or code useful, please cite our work as follows.
 
     [**"Fast and Differentiable Message Passing on Pairwise Markov Random Fields"**](https://1drv.ms/b/s!AngC1-tRlyPMgQy5Vo94RjRqaM9I) (Oral)\
     Zhiwei Xu, Thalaiyasingam Ajanthan, Richard Hartley\
