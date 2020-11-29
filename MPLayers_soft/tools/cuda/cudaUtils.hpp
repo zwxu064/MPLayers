@@ -1,0 +1,16 @@
+#ifndef CUDAUTILS_HPP
+#define CUDAUTILS_HPP
+
+#include <stdio.h>
+#include <iostream>
+
+#define CUDAErrorCheck() __CUDAErrorCheck(__FILE__, __LINE__)
+
+#define CHECK_CUDA(x) AT_ASSERTM(x.type().is_cuda(), #x " must be a CUDA tensor")
+#define CHECK_CONTIGUOUS(x) AT_ASSERTM(x.is_contiguous(), #x " must be contiguous")
+#define CHECK_INPUT(x) CHECK_CUDA(x); CHECK_CONTIGUOUS(x)
+
+void __CUDAErrorCheck(const char *file,
+                      const int line);
+
+#endif
