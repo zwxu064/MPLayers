@@ -5,8 +5,15 @@
     Zhiwei Xu, Thalaiyasingam Ajanthan, Richard Hartley\
     Asian Conference on Computer Vision (ACCV), November 2020, Japan
 
-# MPLayers
-- Code of message passing layers including ISGMR and TRWP in C++, CUDA, PyTorch, and MatLab, will be available ...
+# Requirements
+  Our code supports PyTorch with versions > 1.0 and <= 1.0. For other dependencies, please see "test.sh".
 
-# Notes
--  We will upload our code very soon, before the ACCV 2020 conference. Please do not download the current repository for the code completement.
+# How to Use
+  - Step 1: Replace the soft links of "datasets", "experiments", "pretrained" folders by yours. Then, download [our models](https://1drv.ms/u/s!AngC1-tRlyPMgRx6ahmhqxqJDf65?e=UQRUBN) from OneDrive.
+  
+  - Step 2: [To test] set "enable_test=true" in "test.sh" and change mode to "TRWP", "ISGMR", "SGM", "MeanField", or "vanilla".
+  
+  - Step 3: [To train] set "enable_test=false" and change mode to one mentioned in Step 2.
+
+# Note
+  We will keep updating this repository.
