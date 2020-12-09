@@ -1,17 +1,14 @@
-import shutil
-import glob
-import os
-import torch
+import shutil, glob, os, torch
 from setuptools import setup
 from torch.utils.cpp_extension import CppExtension, CUDAExtension, BuildExtension
 
 enable_cuda = torch.cuda.is_available()
 torch_version_major = int(torch.__version__.split('.')[0])  # major.min.patch
 enable_soft, enable_hard = True, True
-enable_aux, enable_trwp, enable_isgmr = False, False, True
+enable_aux, enable_trwp, enable_isgmr = True, True, False
 MAX_DISPARITY = int(32)
 
-include_dir = ['aux', '../tools/cpp',
+include_dir = ['aux', '../../tools/cpp',
                '/mnt/scratch/zhiwei/Installations/anaconda3/envs/train-cuda/include',
                '/mnt/scratch/zhiwei/Installations/anaconda3/envs/train-cuda/include/opencv',
                '/local/Installation/anaconda3/envs/pytorch3.6-env/include',
@@ -27,7 +24,7 @@ if enable_aux:
         ext_modules=[CppExtension(name='compute_terms',
                                   sources=['aux/auxPy.cpp',
                                            'aux/aux.cpp',
-                                           '../tools/cpp/utils.cpp'],
+                                           '../../tools/cpp/utils.cpp'],
                                   extra_compile_args={'cxx':['-std=c++11',
                                                              '-Wno-deprecated-declarations',
                                                              '-O3']},
@@ -45,7 +42,7 @@ if enable_aux:
 define_macros = [('TORCH_VERSION_MAJOR', torch_version_major), ('USE_CUDA', None), ('MAX_DISPARITY', MAX_DISPARITY)]
 
 if enable_trwp:
-  sources = ['TRWP/TRWP.cpp', 'common.cpp', '../tools/cpp/utils.cpp', '../tools/cuda/cudaUtils.cu']
+  sources = ['TRWP/TRWP.cpp', 'common.cpp', '../../tools/cpp/utils.cpp', '../../tools/cuda/cudaUtils.cu']
 
   if enable_hard:
     sources += ['TRWP/TRWP_forward.cu', 'TRWP/TRWP_backward.cu']
@@ -68,7 +65,7 @@ if enable_trwp:
                                    define_macros=define_macros,
                                    undef_macros=[])],
         cmdclass={'build_ext': BuildExtension},
-        include_dirs=['.', '../tools/cpp', '../tools/cuda'])
+        include_dirs=['.', '../../tools/cpp', '../../tools/cuda'])
 
 target_dir = '../lib_seg_slim'
 if not os.path.exists(target_dir):

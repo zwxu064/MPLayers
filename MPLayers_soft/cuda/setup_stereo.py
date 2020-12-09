@@ -1,15 +1,12 @@
-import shutil
-import glob
-import os
-import torch
+import shutil, glob, os, torch
 from setuptools import setup
 from torch.utils.cpp_extension import CppExtension, CUDAExtension, BuildExtension
 
 enable_cuda = torch.cuda.is_available()
 torch_version_major = int(torch.__version__.split('.')[0])  # major.min.patch
 enable_soft, enable_hard = True, True
-enable_aux, enable_trwp, enable_isgmr = False, False, True
-MAX_DISPARITY = int(64)
+enable_aux, enable_trwp, enable_isgmr = True, True, False
+MAX_DISPARITY = int(96)
 
 include_dir = ['aux', '../tools/cpp',
                '/mnt/scratch/zhiwei/Installations/anaconda3/envs/train-cuda/include',

@@ -1,12 +1,9 @@
 import torch
 import time
+import sys
+sys.path.append('..')
 import matplotlib.pyplot as plt
-import scipy as sp
-sp_version = sp.__version__.split('.')
-if (int(sp_version[0]) >= 1) and (int(sp_version[1]) >= 3):
-  from imageio import imread
-else:
-  from scipy.misc import imread
+from imageio import imread
 from lib_stereo_slim import compute_terms
 
 
@@ -59,7 +56,7 @@ def compute_terms_py(param):
 if __name__ == '__main__':
   torch.manual_seed(2019)
   torch.cuda.manual_seed_all(2019)
-  img_name = 'delivery_area_3s'
+  img_name = 'tsukuba'
 
   # Compute terms
   if img_name == 'tsukuba':

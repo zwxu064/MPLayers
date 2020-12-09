@@ -6,8 +6,6 @@ from message_passing import MessagePassingModule
 from MP_module import MPModule
 from MP_module_manual import test_mp_module_manual
 from test_compute_terms import MRFParams, compute_terms_py
-sys.path.append('..')
-from mean_field import MeanField
 
 
 torch.manual_seed(2019)
@@ -23,10 +21,10 @@ def get_seg_all_iter(cost_all):
   seg_all = []
 
   for idx in range(cost_all.size(0)):
-    # seg_all.append(torch.argmin(cost_all[idx], dim=2).float())
-    seg_all.append(torch.from_numpy(np.argmin(cost_all[idx].cpu().numpy(), axis=2).astype(np.float32)))
+    cost = cost_all[idx].squeeze().detach().cpu().numpy()
+    seg_all.append(np.argmin(cost, 2).astype(np.int8))  # numpy arg returns min indices
 
-  return torch.stack(seg_all, dim=0)
+  return np.stack(seg_all, 2)
 
 
 def test_mp_module(mode, n_iter, unary, n_dir, label_context):
@@ -56,7 +54,7 @@ def test_mp_module(mode, n_iter, unary, n_dir, label_context):
 
 
 if __name__ == '__main__':
-  parser = argparse.ArgumentParser(description='Funny Witch')
+  parser = argparse.ArgumentParser(description='Stereo')
   parser.add_argument('--data_dir', type=str, default='../datasets')
   parser.add_argument('--img_name', type=str, default='tsukuba')
   parser.add_argument('--mode', type=str, default='TRWP')
@@ -66,6 +64,7 @@ if __name__ == '__main__':
   parser.add_argument('--rho', type=float, default=None)
   parser.add_argument('--enable_min_a_dir', action='store_true', default=False)
   parser.add_argument('--enable_saving_label', action='store_true', default=False)
+  parser.add_argument('--enable_cuda_sgm', action='store_true', default=False)
   parser.add_argument('--truncated', type=int, default=1)
   parser.add_argument('--n_disp', type=int, default=10)
   parser.add_argument('--p_weight', type=int, default=10)
@@ -85,6 +84,12 @@ if __name__ == '__main__':
   n_disp = args.n_disp
   p_weight = args.p_weight
   grad_thresh, grad_penalty = 0, 0
+
+  # Note: one iter CUDA SGM and CPU SGM are the same, but iterative versions are different
+  # iterative CUDA SGM is better cuz it does not aggregate after every iteration but after all iterations
+  # while iterative CPU SGM aggregates after every iteration
+  if args.enable_cuda_sgm:
+    assert n_iter == 1
 
   if rho is None:
     rho = 0.5 if (mode == 'TRWP') else 1
@@ -153,8 +158,7 @@ if __name__ == '__main__':
 
   torch.cuda.synchronize()
   time_start = time.time()
-  unary_final_ref = None
-  if (repeats == 1) and (not enable_saving_label) and (mode in ['ISGMR', 'TRWP']):
+  if (repeats == 1) and (not enable_saving_label):
     assert n_cv == 1
     unary_final_ref, message_final_ref, dunary_final_ref, dmessage_final_ref, \
       dlabel_context_ref = test_mp_module(mode, n_iter, unary_auto, n_dir,
@@ -198,35 +202,23 @@ if __name__ == '__main__':
     unary_cuda = unary_cuda.view(1, 1, n_disp,h,w).to('cuda')
     label_context_cuda = copy.deepcopy(label_context).to('cuda')
 
-    if mode == 'SGM':
+    if mode == 'SGM':  # TODO
       unary_cuda = unary_cuda.cpu()
       label_context_cuda = label_context_cuda.cpu()
 
     torch.cuda.synchronize()
     time_start = time.time()
 
-    if mode == 'MeanField':
-      args.n_classes = n_disp
-      args.mpnet_n_dirs = n_dir
-      args.mpnet_max_iter = n_iter
-      args.mpnet_smoothness_mode = context
-      args.mpnet_smoothness_trunct_loc = truncated
-      args.mpnet_smoothness_trunct_value = truncated
-      args.mpnet_term_weight = p_weight
-      args.enable_cuda = enable_cuda
-      args.mpnet_smoothness_train = None
-      mp_module = MeanField(args, enable_create_label_context=False)
-      mp_module.set_label_context(label_context_cuda[0])
+    if False:
+      mp_module = MPModule(n_dir=n_dir,
+                           n_iter=n_iter,
+                           n_disp=n_disp,
+                           mode=mode, rho=rho,
+                           label_context=label_context_cuda,
+                           enable_saving_label=enable_saving_label,
+                           enable_min_a_dir=enable_min_a_dir,
+                           term_weight=5)
     else:
-      # mp_module = MPModule(n_dir=n_dir,
-      #                      n_iter=n_iter,
-      #                      n_disp=n_disp,
-      #                      mode=mode,
-      #                      rho=rho,
-      #                      label_context=label_context_cuda,
-      #                      enable_saving_label=enable_saving_label,
-      #                      enable_min_a_dir=enable_min_a_dir,
-      #                      term_weight=5)
       args.mpnet_mrf_mode = mode
       args.n_classes = n_disp
       args.mpnet_smoothness_train = ''
@@ -250,31 +242,8 @@ if __name__ == '__main__':
 
     torch.cuda.synchronize()
     time_start = time.time()
-
-    if mode == 'MeanField':
-      results = mp_module(unary_cuda)
-      cost_final6 = results[0]
-      cost_all = results[2]
-
-      if cost_all is None:
-        seg_all = cost_final6.squeeze()
-      else:
-        seg_all = []
-        for idx in range(len(cost_all)):
-          seg_all.append(get_seg_all_iter(cost_all[idx].unsqueeze(0)))
-
-        seg_all = torch.cat(seg_all, dim=0).squeeze(1).squeeze(1)
-    else:
-      # cost_final6:(1,1,n_disp,h,w); cost_all:(n_iter,1,1,h,w)
-      results = mp_module(unary_cuda)
-      cost_final6 = results[0]
-      cost_all = results[2]
-
-      if (cost_all is not None) and (len(cost_all) > 0):
-        seg_all = cost_all.squeeze(1).squeeze(1)
-      else:
-        seg_all = cost_final6.squeeze()
-
+    results = mp_module(unary_cuda)
+    cost_final6, cost_all = results[0], results[2]
     cost_final6 = -cost_final6  # convert to fake prob
     torch.cuda.synchronize()
     forward_time = time.time() - time_start
@@ -300,6 +269,11 @@ if __name__ == '__main__':
 
     # ==== Save for energy
     if enable_saving_label:
+      if len(cost_all.size()) == 6:
+        seg_all = get_seg_all_iter(cost_all)
+      else:
+        seg_all = cost_all
+
       scio.savemat(file_path, {'n_iter': n_iter,
                                'n_dir': n_dir,
                                'rho': rho,
@@ -310,7 +284,7 @@ if __name__ == '__main__':
                                'min_a_dir': int(enable_min_a_dir),
                                'unary': unary_cuda.squeeze().permute(1, 2, 0).detach().cpu().numpy(),
                                'label_context': smoothness_context.permute(1, 2, 0).detach().cpu().numpy(),
-                               'seg_all': seg_all.permute(1, 2, 0).detach().cpu().numpy().astype(np.uint8)})
+                               'seg_all': seg_all.squeeze(1).squeeze(1).permute(1, 2, 0).detach().cpu().numpy()})
 
     if (repeats > 1) and enable_backward:
       print(unary_cuda.grad.abs().mean().cpu().numpy(),
@@ -324,7 +298,7 @@ if __name__ == '__main__':
   print('cuda average time {:.4f}s, forward {:.4f}s, backward {:.4f}s' \
         .format(time_all / repeats, time_all_forward / repeats, time_all_backward / repeats))
 
-  if (repeats == 1) and (not enable_saving_label) and (unary_final_ref is not None):
+  if (repeats == 1) and (not enable_saving_label):
     # CPU and GPU precisions are different, so use CPU or GPU for both
     print('final cost check, ref: {}, cuda: {}'
           .format(unary_final_ref.cpu().sum(), cost_final6.cpu().sum()))
