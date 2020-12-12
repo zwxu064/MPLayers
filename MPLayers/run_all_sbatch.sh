@@ -1,12 +1,12 @@
 #!/bin/bash
 
- img_names=("tsukuba" "teddy" "venus" "cones" "map" "000002_11" "000041_10" "000119_10" "delivery_area_1l" "facade_1s" "penguin" "house")
- p_funcs=("TL" "TL" "TQ" "TL" "TL" "TL" "TL" "TL" "TL" "TL" "TQ" "TQ")
- n_disps=(16 60 20 55 29 96 96 96 32 32 256 256)
- truncs=(2 1 7 8 6 95 95 95 31 31 200 -1)
- p_weights=(20 10 50 10 4 10 10 10 10 10 25 5)
- modes=("SGM" "ISGMR" "TRWP" "MeanField")  # SGM needs longer time since it is CPU
- n_dirs=(4 8 16)
+img_names=("tsukuba" "teddy" "venus" "cones" "map" "000002_11" "000041_10" "000119_10" "delivery_area_1l" "facade_1s" "penguin" "house")
+p_funcs=("TL" "TL" "TQ" "TL" "TL" "TL" "TL" "TL" "TL" "TL" "TQ" "TQ")
+n_disps=(16 60 20 55 29 96 96 96 32 32 256 256)
+truncs=(2 1 7 8 6 95 95 95 31 31 200 -1)
+p_weights=(20 10 50 10 4 10 10 10 10 10 25 5)
+modes=("SGM" "ISGMR" "TRWP" "MeanField")  # SGM needs longer time since it is CPU
+n_dirs=(4 8 16)
 
 #img_names=("teddy")
 #p_funcs=("TL")

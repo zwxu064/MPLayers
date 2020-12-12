@@ -30,7 +30,6 @@ module load pytorch/0.4.1-py36-cuda90 cuda/9.2.88 gcc/6.4.0 eigen/3.2.9 python/3
 module load xfce/4.12 opencv/3.4.3
 
 python main.py \\
---server \"data61\" \\
 --backbone \"resnet101\" \\
 --gpu-ids \"0\" \\
 --workers 4 \\
@@ -44,7 +43,6 @@ python main.py \\
 --output_directory \"experiments/run/${mode}/seg\" \\
 --checkpoint_dir \"experiments/run/${mode}\" \\
 --mpnet_mrf_mode \"${mode}\" \\
---edge_pixel 1 \\
 --enable_mplayer_epoch 0 \\
 --crop-size 512 \\
 --base-size 512 \\
