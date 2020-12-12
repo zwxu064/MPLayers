@@ -37,7 +37,7 @@
                        '[opencv path]/include/opencv']
         library_dir = ['[opencv path]/lib',
                        '[opencv path]/lib64']
-        ```
+    ```
   - Start compiling for MPLayer libraries (will be stored in "lib_stere_slim" and "lib_seg_slim") by running
     
     For ISGMR,
