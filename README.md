@@ -10,15 +10,16 @@
   To compile MP Layers, please do as follows
   
   - Install opencv for C++, opencv3.4.3 in our case, then set "[path]" for MP layers (ours is in "./MPLayers/compile.sh") in **~/.bashrc** by
-        ```
-        export PYTHONPATH=[path]/MPLayers:[path]/MPLayers/Stereo:[path]/MPLayers/Segmentation:$PYTHONPATH$
-        ```
+    ```
+    export PYTHONPATH=[path]/MPLayers:[path]/MPLayers/Stereo:[path]/MPLayers/Segmentation:$PYTHONPATH$;
+    source ~/.bashrc;
+    ```
 
   - Edit files as follows
 
-    In **"./MPLayers/compile.sh"** and **"./MPLayers_soft/cuda/compile.sh"**, set the "[path]" in Step 1 by
+    In **"./MPLayers/compile.sh"** and **"./MPLayers_soft/cuda/compile.sh"**, set the "[path]" by
     ```
-    python setup.py develop --install-dir=[path]/MPLayers
+    python setup.py --mode="stereo" develop --install-dir=[path]/MPLayers  # while mode: "stereo"|"segmentation"
     ```
 
     In **"./MPLayers/setup.py"** and **"./MPLayers_soft/cuda/setup.py"**,
@@ -109,19 +110,17 @@ To run deep semantic segmentation, please install
   - Ensure folders of "datasets", "experiments", and "pretrained" exist.
     Then, download [our models](https://1drv.ms/u/s!AngC1-tRlyPMgRx6ahmhqxqJDf65?e=UQRUBN) and stored in each subfolder, e.g., "pretrained/TRWP/model.pth.tar".
       
-  - To test using "run.sh"
+  - To test using "test.sh"
     ```
-    add "--enable_test" in the command
     set "--mpnet_mrf_mode" as "TRWP", "ISGMR", "SGM", "MeanField", or "vanilla"
-    ./run.sh
+    ./test.sh
     ```
       
-  - To train using "run.sh"
+  - To train using "train.sh"
     ```
-    remove "--enable_test" and "--resume" from the command
     set --resume_unary="pretrained/vanilla/model.pth.tar" in the command for "--mpnet_mrf_mode" in ["TRWP", "ISGMR", "SGM", "MeanField"]
     remove "--resume_unary" from the command for --mpnet_mrf_mode="vanilla"
-    ./run.sh
+    ./train.sh
     ```
   
 # Note
