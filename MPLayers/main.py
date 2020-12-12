@@ -154,12 +154,12 @@ if __name__ == '__main__':
 
   # ==== Save file path
   if True:  # enable_saving_label:
-    save_dir = '{}/{}'.format(args.save_dir, args.img_name)
+    save_dir = '{}/energy/{}'.format(args.save_dir, args.img_name)
 
     if not os.path.exists(save_dir):
       os.mkdir(save_dir)
 
-    file_path = os.path.join(save_dir, 'energy/{}_{}_iter_{}_{}_trunc_{}_dir_{}_rho_{}' \
+    file_path = os.path.join(save_dir, '{}_{}_iter_{}_{}_trunc_{}_dir_{}_rho_{}' \
                              .format(img_name, mode, n_iter, context, truncated,
                                      n_dir, rho))
     file_path = file_path + '_minAdir' if enable_min_a_dir else file_path
