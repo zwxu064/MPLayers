@@ -28,6 +28,7 @@ class Trainer(object):
         self.train_loader, self.val_loader, self.test_loader, self.nclass = make_data_loader(args, **kwargs)
 
         # Define network
+        args.enable_symmetric = True
         args.mpnet_smoothness_trunct_loc = -1
         args.mpnet_smoothness_trunct_value = -1
         args.enable_cuda = True

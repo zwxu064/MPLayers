@@ -1,17 +1,21 @@
 #!/bin/bash
 
-# module load tensorboardx/1.2.0-py36-cuda90 torchvision/0.2.1-py36
-# module load intel-mkl/2017.2.174 intel-cc/17.0.2.174 intel-fc/17.0.2.174 caffe/0.16.6
-# module load pytorch/0.4.1-py36-cuda90 cuda/9.2.88 gcc/6.4.0 eigen/3.2.9 python/3.6.1
-# module load xfce/4.12 opencv/3.4.3
+ img_names=("tsukuba" "teddy" "venus" "cones" "map" "000002_11" "000041_10" "000119_10" "delivery_area_1l" "facade_1s" "penguin" "house")
+ p_funcs=("TL" "TL" "TQ" "TL" "TL" "TL" "TL" "TL" "TL" "TL" "TQ" "TQ")
+ n_disps=(16 60 20 55 29 96 96 96 32 32 256 256)
+ truncs=(2 1 7 8 6 95 95 95 31 31 200 -1)
+ p_weights=(20 10 50 10 4 10 10 10 10 10 25 5)
+ modes=("SGM" "ISGMR" "TRWP" "MeanField")  # SGM needs longer time since it is CPU
+ n_dirs=(4 8 16)
 
-img_names=("tsukuba" "teddy" "venus" "cones" "map" "000002_11" "000041_10" "000119_10" "delivery_area_1l" "facade_1s")
-p_funcs=("TL" "TL" "TQ" "TL" "TL" "TL" "TL" "TL" "TL" "TL")
-n_disps=(16 60 20 55 29 96 96 96 32 32)
-truncs=(2 1 7 8 6 95 95 95 31 31)
-p_weights=(20 10 50 10 4 10 10 10 10 10)
-modes=("SGM" "ISGMR" "TRWP" "MeanField")
-n_dirs=(4 8 16)
+#img_names=("teddy")
+#p_funcs=("TL")
+#n_disps=(60)
+#truncs=(1)
+#p_weights=(10)
+#modes=("TRWP")
+#n_dirs=(4 16)
+
 enable_min_a_dirs=(false)
 enable_run_script=true
 
@@ -34,10 +38,10 @@ for idx in "${!img_names[@]}"; do
 
         echo -e "
 #SBATCH --job-name="${img_name}_${p_func}_${p_weight}_${n_disp}_${trunc}_${mode}_${n_dir}_${n_iter}"
-#SBATCH --time=00:30:00
+#SBATCH --time=01:00:00
 #SBATCH --mem=16G
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
+#SBATCH --ntasks-per-node=8
 #SBATCH --gres=gpu:1
 #SBATCH --mail-user=
 #SBATCH --mail-type=BEGIN,END,FAIL

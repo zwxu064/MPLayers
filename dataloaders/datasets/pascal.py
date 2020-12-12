@@ -1,16 +1,14 @@
 from __future__ import print_function, division
-import os
+import os, torch, sys
 from PIL import Image
 import numpy as np
-import torch
 from torch.utils.data import Dataset
-from utils import Path
+from utils.mypath import Path
 from torchvision import transforms
 from dataloaders import custom_transforms as tr
 from skimage import feature, filters
 from skimage.transform import rescale
 import torch.nn.functional as F
-import sys
 sys.path.append('../..')
 from mpnet import getEdgeShift
 
@@ -32,7 +30,11 @@ class VOCSegmentation(Dataset):
         :param transform: transform to apply
         """
         super().__init__()
-        base_dir = Path.db_root_dir('pascal', server=server)
+        if args.dataset_root is None:
+            base_dir = Path.db_root_dir('pascal', server=server)
+        else:
+            base_dir = args.dataset_root
+
         self._base_dir = base_dir
         self._image_dir = os.path.join(self._base_dir, 'JPEGImages')
 

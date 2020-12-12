@@ -1,8 +1,9 @@
 #!/bin/bash -l
 
-mode="vanilla"
+mode="TRWP"
 enable_run_script=true
-enable_test=false
+enable_test=true
+dataset_root="datasets/pascal_scribble"
 
 if ${enable_test}; then
   bash_name="experiments/scripts/${mode}_test.sh"
@@ -28,7 +29,6 @@ module load intel-mkl/2017.2.174 intel-cc/17.0.2.174 intel-fc/17.0.2.174 caffe/0
 module load pytorch/0.4.1-py36-cuda90 cuda/9.2.88 gcc/6.4.0 eigen/3.2.9 python/3.6.1
 module load xfce/4.12 opencv/3.4.3
 
-CUDA_VISIBLE_DEVICES=\"0\" \\
 python main.py \\
 --server \"data61\" \\
 --backbone \"resnet101\" \\
@@ -37,6 +37,7 @@ python main.py \\
 --val-batch-size 12 \\
 --checkname \"deeplab-resnet\" \\
 --eval-interval 1 \\
+--dataset_root=\"${dataset_root}\" \\
 --dataset \"pascal\" \\
 --save-interval 1 \\
 --rloss-scale 0.5 \\

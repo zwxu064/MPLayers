@@ -1,8 +1,10 @@
-import torch
+import torch, sys
 import torch.nn as nn
 import numpy as np
-from ..lib_stereo_slim import TRWP_hard_soft as TRWP_stereo
-from ..lib_seg_slim import TRWP_hard_soft as TRWP_seg
+sys.path.append('..')
+from MPLayers_soft.lib_stereo_slim import TRWP_hard_soft as TRWP_stereo
+from MPLayers_soft.lib_seg_slim import TRWP_hard_soft as TRWP_seg
+from utils.label_context import create_label_context
 
 # references:
 # http://www.benjack.io/2017/06/12/python-cpp-tests.html
@@ -130,74 +132,9 @@ class MPModule(torch.nn.Module):
     self.label_context_diag_loc = label_context_diag_loc
 
   def create_label_context(self):
-    if self.args.enable_seg:
-      label_context = np.zeros((self.args.n_classes, self.args.n_classes), dtype=np.float32)
-      if self.smoothness_mode == 'Potts':
-        if self.smoothness_train != 'sigmoid':
-          for left_d in range(self.args.n_classes):
-            for right_d in range(self.args.n_classes):
-              gap = right_d - left_d
-              if gap > 0:
-                label_context[left_d, right_d] = 1
-      elif self.smoothness_mode == 'TL':
-        for left_d in range(self.args.n_classes):
-          for right_d in range(self.args.n_classes):
-            gap = right_d - left_d
-            if gap > 0:
-              label_context[left_d, right_d] = gap
-      elif self.smoothness_mode == 'TQ':
-        for left_d in range(self.args.n_classes):
-          for right_d in range(self.args.n_classes):
-            gap = right_d - left_d
-            if gap > 0:
-              label_context[left_d, right_d] = np.power(gap, 2)
-      elif self.smoothness_mode == 'NPotts':
-        for left_d in range(self.args.n_classes):
-          for right_d in range(self.args.n_classes):
-            if left_d == right_d:
-              label_context[left_d, right_d] = -1
-
-      if (self.smoothness_trunct_loc >= 0) and (self.smoothness_trunct_value >= 0):
-        for left_d in range(self.args.n_classes):
-          for right_d in range(self.args.n_classes):
-            gap = right_d - left_d
-            if gap > 0 and gap >= self.smoothness_trunct_loc:
-              label_context[left_d, right_d] = self.smoothness_trunct_value
-    else:
-      label_context = np.zeros((self.args.n_classes), dtype=np.float32)
-      if self.smoothness_mode == 'Potts':
-        if self.smoothness_train != 'sigmoid':
-          label_context[1:] = 1
-      elif self.smoothness_mode == 'TL':
-        for d in range(self.args.n_classes):
-          label_context[d] = d
-      elif self.smoothness_mode == 'TQ':
-        for d in range(self.args.n_classes):
-          label_context[d] = np.power(d, 2)
-      elif self.smoothness_mode == 'NPotts':
-          label_context[0] = -1
-
-      if (self.smoothness_mode in ['TL', 'TQ']) \
-              and (self.smoothness_trunct_loc >= 0) \
-              and (self.smoothness_trunct_value >= 0):
-        for d in range(self.args.n_classes):
-          if d >= self.smoothness_trunct_loc:
-            label_context[d] = self.smoothness_trunct_value
-
-    label_context = torch.from_numpy(label_context)
-
-    if self.args.enable_cuda and (not label_context.is_cuda):
-      label_context = label_context.cuda()
-
-    enable_grad = self.smoothness_train in ['softmax', 'sigmoid', 'on']
-    self.label_context = nn.Parameter(label_context, requires_grad=enable_grad)
-
-    if len(label_context.size()) == 2:
-      self.label_context_loc = np.triu_indices(self.args.n_classes, k=1)
-      self.label_context_diag_loc = [range(self.args.n_classes), range(self.args.n_classes)]
-    else:
-      self.label_context_loc = range(1, self.args.n_classes)
-      self.label_context_diag_loc = range(1)
+    self.label_context, self.label_context_loc, self.label_context_diag_loc = \
+      create_label_context(self.args, enable_seg=self.args.enable_seg,
+                           enable_symmetric=self.args.enable_symmetric)
 
   def forward(self, unary, edge_weights=None, msg_norm_index=None, pairwise_terms=None):
     # unary:(batch,cv,n_disp,h,w); label_context:(n_disp,n_disp) for seg and (n_disp) for stereo

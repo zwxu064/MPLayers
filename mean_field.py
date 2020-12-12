@@ -1,8 +1,8 @@
 import torch, sys
 import torch.nn as nn
-sys.path.append('../utils')
-from edge_weights import getEdgeShift
-from label_context import create_label_context
+sys.path.append('..')
+from utils.edge_weights import getEdgeShift
+from utils.label_context import create_label_context
 
 
 class MeanField(nn.Module):

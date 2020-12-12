@@ -20,7 +20,10 @@ for v in argv_list:
 
 enable_cuda = torch.cuda.is_available()
 torch_version_major = int(torch.__version__.split('.')[0])  # major.min.patch
+
+# Note: for denoise, manually change 96 to 256
 MAX_DISPARITY = int(96) if (args.mode == 'stereo') else int(32)
+# MAX_DISPARITY = int(256) if (args.mode == 'stereo') else int(32)
 
 include_dir = ['aux', '../tools/cpp',
                '/mnt/scratch/zhiwei/Installations/anaconda3/envs/train-cuda/include',

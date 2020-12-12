@@ -1,4 +1,4 @@
-import torch, os, time, sys, copy, argparse
+import torch, os, time, sys, copy, argparse, csv
 import scipy.io as scio
 import numpy as np
 sys.path.append('../pytorch')
@@ -7,7 +7,9 @@ from MP_module import MPModule
 from MP_module_manual import test_mp_module_manual
 from test_compute_terms import MRFParams, compute_terms_py
 sys.path.append('..')
+sys.path.append('../utils')
 from mean_field import MeanField
+from label_context import create_label_context
 
 
 torch.manual_seed(2019)
@@ -19,11 +21,27 @@ torch.backends.cudnn.benchmark = False
 enable_backward = False
 
 
+def parse_unary_cost(file_path):
+  assert os.path.exists(file_path)
+  reader = csv.reader(open(file_path, 'r'), delimiter=",")
+  data = list(reader)
+  height, width, n_disp = [int(v) for v in data[0]]
+  num_nodes = height * width
+  assert len(data) - 1 == num_nodes
+
+  data_cost = []
+  for i in range(1, len(data)):
+    data_cost.append(np.array([float(v) for v in data[i]]))
+  data_cost = np.stack(data_cost, axis=0).reshape(height, width, n_disp).astype(np.float32)
+  data_cost = torch.from_numpy(data_cost)
+
+  return height, width, n_disp, data_cost
+
+
 def get_seg_all_iter(cost_all):
   seg_all = []
 
   for idx in range(cost_all.size(0)):
-    # seg_all.append(torch.argmin(cost_all[idx], dim=2).float())
     seg_all.append(torch.from_numpy(np.argmin(cost_all[idx].cpu().numpy(), axis=2).astype(np.float32)))
 
   return torch.stack(seg_all, dim=0)
@@ -89,37 +107,59 @@ if __name__ == '__main__':
   if rho is None:
     rho = 0.5 if (mode == 'TRWP') else 1
 
-  assert n_disp <= 192
+  assert n_disp <= 256
 
   # Compute terms
-  if args.left_img_path is None or args.right_img_path is None:
-    data_dir = args.data_dir
-    if args.img_name[0:3] == '000':
-      left_img_path = os.path.join(data_dir, 'KITTI2015/image_2/{}.png'.format(args.img_name))
-      right_img_path = os.path.join(data_dir, 'KITTI2015/image_3/{}.png'.format(args.img_name))
-    elif args.img_name.split('_')[-1][-2:] in ['1l', '2l', '3l', '1s', '2s', '3s']:
-      left_img_path = os.path.join(data_dir, 'ETH3D/training/{}/im0.png'.format(args.img_name))
-      right_img_path = os.path.join(data_dir, 'ETH3D/training/{}/im1.png'.format(args.img_name))
-    else:
-      postfix = 'pgm' if args.img_name == 'map' else 'ppm'
-      left_img_path = os.path.join(data_dir, 'Middlebury/{}/imL.{}'.format(args.img_name, postfix))
-      right_img_path = os.path.join(data_dir, 'Middlebury/{}/imR.{}'.format(args.img_name, postfix))
+  if args.img_name in {'house', 'penguin'}:
+    unary_file = '{}/Denoise/{}_unary.csv'.format(args.data_dir, img_name)
+    h, w, n_disp, data_cost = parse_unary_cost(unary_file)
+    args.n_classes = n_disp
+    args.mpnet_n_dirs = n_dir
+    args.mpnet_max_iter = n_iter
+    args.mpnet_smoothness_mode = context
+    args.mpnet_smoothness_trunct_loc = -1
+    args.mpnet_smoothness_trunct_value = truncated
+    args.mpnet_term_weight = p_weight
+    args.enable_cuda = enable_cuda
+    args.mpnet_smoothness_train = None
+
+    smoothness_context, _, _ = create_label_context(args, enable_seg=True, enable_symmetric=True)
   else:
-    left_img_path = args.left_img_path
-    right_img_path = args.right_img_path
-    assert left_img_path is not None and os.path.exists(left_img_path), \
-      'Left image {} not exist'.format(left_img_path)
-    assert right_img_path is not None and os.path.exists(right_img_path), \
-      'Right image {} not exist'.format(right_img_path)
+    if args.left_img_path is None or args.right_img_path is None:
+      data_dir = args.data_dir
+      if args.img_name[0:3] == '000':
+        left_img_path = os.path.join(data_dir, 'KITTI2015/image_2/{}.png'.format(args.img_name))
+        right_img_path = os.path.join(data_dir, 'KITTI2015/image_3/{}.png'.format(args.img_name))
+      elif args.img_name.split('_')[-1][-2:] in ['1l', '2l', '3l', '1s', '2s', '3s']:
+        left_img_path = os.path.join(data_dir, 'ETH3D/training/{}/im0.png'.format(args.img_name))
+        right_img_path = os.path.join(data_dir, 'ETH3D/training/{}/im1.png'.format(args.img_name))
+      else:
+        postfix = 'pgm' if args.img_name == 'map' else 'ppm'
+        left_img_path = os.path.join(data_dir, 'Middlebury/{}/imL.{}'.format(args.img_name, postfix))
+        right_img_path = os.path.join(data_dir, 'Middlebury/{}/imR.{}'.format(args.img_name, postfix))
+    else:
+      left_img_path = args.left_img_path
+      right_img_path = args.right_img_path
+      assert left_img_path is not None and os.path.exists(left_img_path), \
+        'Left image {} not exist'.format(left_img_path)
+      assert right_img_path is not None and os.path.exists(right_img_path), \
+        'Right image {} not exist'.format(right_img_path)
+
+    # ==== Get terms    
+    param = MRFParams(left_img_path, right_img_path, context, n_disp, grad_thresh,
+                      grad_penalty, truncated)
+    data_cost, RGB, smoothness_context, param = compute_terms_py(param)
+    smoothness_context *= p_weight
+    h, w = param.height, param.width
 
   # ==== Save file path
-  if enable_saving_label:
+  if True:  # enable_saving_label:
     save_dir = '{}/{}'.format(args.save_dir, args.img_name)
 
     if not os.path.exists(save_dir):
       os.mkdir(save_dir)
 
-    file_path = os.path.join(save_dir, '{}_{}_iter_{}_{}_trunc_{}_dir_{}_rho_{}' \
+    file_path = os.path.join(save_dir, 'energy/{}_{}_iter_{}_{}_trunc_{}_dir_{}_rho_{}' \
                              .format(img_name, mode, n_iter, context, truncated,
                                      n_dir, rho))
     file_path = file_path + '_minAdir' if enable_min_a_dir else file_path
@@ -131,18 +171,11 @@ if __name__ == '__main__':
   else:
     file_path = None
 
-  # ==== Get terms
-  param = MRFParams(left_img_path, right_img_path, context, n_disp, grad_thresh,
-                    grad_penalty, truncated)
-  data_cost, RGB, smoothness_context, param = compute_terms_py(param)
-  smoothness_context *= p_weight
-
   # ==== Inference
-  h, w, = param.height, param.width
   repeats, n_cv, manual_thre = 1, 1, 1
 
   # ==== Auto
-  smoothness_context = smoothness_context.view(1,n_disp,n_disp).repeat(n_dir, 1, 1)
+  smoothness_context = smoothness_context.view(1, n_disp, n_disp).repeat(n_dir, 1, 1)
   label_context = smoothness_context.contiguous()
   unary = data_cost.permute(2, 0, 1).contiguous()
 
@@ -205,34 +238,21 @@ if __name__ == '__main__':
     torch.cuda.synchronize()
     time_start = time.time()
 
+    args.n_classes = n_disp
+    args.mpnet_n_dirs = n_dir
+    args.mpnet_max_iter = n_iter
+    args.mpnet_term_weight = p_weight
+    args.mpnet_smoothness_train = None
+
     if mode == 'MeanField':
-      args.n_classes = n_disp
-      args.mpnet_n_dirs = n_dir
-      args.mpnet_max_iter = n_iter
       args.mpnet_smoothness_mode = context
-      args.mpnet_smoothness_trunct_loc = truncated
+      args.mpnet_smoothness_trunct_loc = -1
       args.mpnet_smoothness_trunct_value = truncated
-      args.mpnet_term_weight = p_weight
       args.enable_cuda = enable_cuda
-      args.mpnet_smoothness_train = None
       mp_module = MeanField(args, enable_create_label_context=False)
       mp_module.set_label_context(label_context_cuda[0])
     else:
-      # mp_module = MPModule(n_dir=n_dir,
-      #                      n_iter=n_iter,
-      #                      n_disp=n_disp,
-      #                      mode=mode,
-      #                      rho=rho,
-      #                      label_context=label_context_cuda,
-      #                      enable_saving_label=enable_saving_label,
-      #                      enable_min_a_dir=enable_min_a_dir,
-      #                      term_weight=5)
       args.mpnet_mrf_mode = mode
-      args.n_classes = n_disp
-      args.mpnet_smoothness_train = ''
-      args.mpnet_term_weight = 5
-      args.mpnet_n_dirs = n_dir
-      args.mpnet_max_iter = n_iter
       args.rho = rho
       mp_module = MPModule(args,
                            enable_create_label_context=False,
@@ -299,7 +319,7 @@ if __name__ == '__main__':
     torch.cuda.empty_cache()
 
     # ==== Save for energy
-    if enable_saving_label:
+    if True:
       scio.savemat(file_path, {'n_iter': n_iter,
                                'n_dir': n_dir,
                                'rho': rho,

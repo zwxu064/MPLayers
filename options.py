@@ -21,6 +21,7 @@ def set_config():
                       choices=['resnet50', 'resnet101', 'xception', 'drn', 'mobilenet'],
                       help='backbone name (default: resnet)')
   parser.add_argument('--out-stride', type=int, default=16, help='network output stride (default: 8)')
+  parser.add_argument('--dataset_root', type=str, default=None)
   parser.add_argument('--dataset', type=str, default='pascal', choices=['pascal', 'coco', 'cityscapes'],
                       help='dataset name (default: pascal)')
   parser.add_argument('--use-sbd', action='store_true', default=False, help='whether to use SBD dataset (default: True)')
@@ -147,11 +148,14 @@ def set_config():
     args.superpixel = ''
     args.superpixel_threshold = 0
 
-  if args.mpnet_mrf_mode == 'vanilla':
+  if not args.enable_test and args.mpnet_mrf_mode == 'vanilla':
     args.resume_unary = ''
     args.resume = ''
 
   if args.mpnet_mrf_mode == 'SGM':
     args.mpnet_max_iter = 1
+
+  if args.dataset_root == '':
+    args.dataset_root = None
 
   return args

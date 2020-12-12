@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-from utils import Path
+from utils.mypath import Path
 from tqdm import trange
 import os
 from pycocotools.coco import COCO
@@ -25,7 +25,12 @@ class COCOSegmentation(Dataset):
         super().__init__()
         ann_file = os.path.join(base_dir, 'annotations/instances_{}{}.json'.format(split, year))
         ids_file = os.path.join(base_dir, 'annotations/{}_ids_{}.pth'.format(split, year))
-        base_dir = Path.db_root_dir('coco', server=server)
+
+        if args.dataset_root is None:
+            base_dir = Path.db_root_dir('coco', server=server)
+        else:
+            base_dir = args.dataset_root
+
         self.img_dir = os.path.join(base_dir, 'images/{}{}'.format(split, year))
         self.split = split
         self.coco = COCO(ann_file)

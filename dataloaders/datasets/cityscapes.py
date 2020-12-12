@@ -1,9 +1,9 @@
-import os
+import os, sys
 import numpy as np
 import scipy.misc as m
 from PIL import Image
 from torch.utils import data
-from utils import Path
+from utils.mypath import Path
 from torchvision import transforms
 from dataloaders import custom_transforms as tr
 
@@ -11,7 +11,11 @@ class CityscapesSegmentation(data.Dataset):
     NUM_CLASSES = 19
 
     def __init__(self, args, split="train", server='039614'):
-        root = Path.db_root_dir('cityscapes', server=server)
+        if args.dataset_root is None:
+            root = Path.db_root_dir('cityscapes', server=server)
+        else:
+            root = args.dataset_root
+
         self.root = root
         self.split = split
         self.args = args

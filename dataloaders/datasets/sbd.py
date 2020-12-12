@@ -1,11 +1,10 @@
 from __future__ import print_function, division
 import os
-
 import numpy as np
 import scipy.io
 import torch.utils.data as data
 from PIL import Image
-from utils import Path
+from utils.mypath import Path
 
 from torchvision import transforms
 from dataloaders import custom_transforms as tr
@@ -24,7 +23,11 @@ class SBDSegmentation(data.Dataset):
         :param transform: transform to apply
         """
         super().__init__()
-        base_dir = Path.db_root_dir('sbd', server=server)
+        if args.dataset_root is None:
+            base_dir = Path.db_root_dir('sbd', server=server)
+        else:
+            base_dir = args.dataset_root
+
         self._base_dir = base_dir
         self._dataset_dir = os.path.join(self._base_dir, 'dataset')
         self._image_dir = os.path.join(self._dataset_dir, 'img')

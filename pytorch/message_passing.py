@@ -1,10 +1,8 @@
-import sys
-import torch
+import sys, torch, time
 import torch.nn as nn
-import time
-sys.path.append('../tools/python')
-sys.path.append('tools/python')
-from utils import check_valid, check_data_input
+sys.path.append('../tools')
+sys.path.append('tools')
+from python.utils import check_valid, check_data_input
 
 
 class Params():

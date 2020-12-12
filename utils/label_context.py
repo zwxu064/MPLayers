@@ -3,8 +3,9 @@ import torch.nn as nn
 import numpy as np
 
 
-def create_label_context(args):
-  enable_seg = True if (args.n_classes == 21) else False
+def create_label_context(args, enable_seg=None, enable_symmetric=False):
+  if enable_seg is None:
+    enable_seg = True if (args.n_classes == 21) else False
 
   if enable_seg:
     label_context = np.zeros((args.n_classes, args.n_classes), dtype=np.float32)
@@ -13,18 +14,21 @@ def create_label_context(args):
         for left_d in range(args.n_classes):
           for right_d in range(args.n_classes):
             gap = right_d - left_d
+            gap = abs(gap) if enable_symmetric else gap
             if gap > 0:
               label_context[left_d, right_d] = 1
     elif args.mpnet_smoothness_mode == 'TL':
       for left_d in range(args.n_classes):
         for right_d in range(args.n_classes):
           gap = right_d - left_d
+          gap = abs(gap) if enable_symmetric else gap
           if gap > 0:
             label_context[left_d, right_d] = gap
     elif args.mpnet_smoothness_mode == 'TQ':
       for left_d in range(args.n_classes):
         for right_d in range(args.n_classes):
           gap = right_d - left_d
+          gap = abs(gap) if enable_symmetric else gap
           if gap > 0:
             label_context[left_d, right_d] = np.power(gap, 2)
     elif args.mpnet_smoothness_mode == 'NPotts':
@@ -33,12 +37,16 @@ def create_label_context(args):
           if left_d == right_d:
             label_context[left_d, right_d] = -1
 
-    if (args.mpnet_smoothness_trunct_loc >= 0) and (args.mpnet_smoothness_trunct_value >= 0):
+    if (args.mpnet_smoothness_trunct_value >= 0):
       for left_d in range(args.n_classes):
         for right_d in range(args.n_classes):
-          gap = right_d - left_d
-          if gap > 0 and gap >= args.mpnet_smoothness_trunct_loc:
-            label_context[left_d, right_d] = args.mpnet_smoothness_trunct_value
+          value = label_context[left_d, right_d]
+
+          if args.mpnet_smoothness_trunct_loc >= 0:
+            if gap >= args.mpnet_smoothness_trunct_loc:
+              label_context[left_d, right_d] = min(value, args.mpnet_smoothness_trunct_value)
+          else:
+            label_context[left_d, right_d] = min(value, args.mpnet_smoothness_trunct_value)
   else:
     label_context = np.zeros((args.n_classes), dtype=np.float32)
     if args.mpnet_smoothness_mode in {'Potts', 'potts'}:
@@ -53,10 +61,15 @@ def create_label_context(args):
     elif args.mpnet_smoothness_mode == 'NPotts':
       label_context[0] = -1
 
-    if (args.mpnet_smoothness_trunct_loc >= 0) and (args.mpnet_smoothness_trunct_value >= 0):
+    if (args.mpnet_smoothness_trunct_value >= 0):
       for d in range(args.n_classes):
-        if d >= args.mpnet_smoothness_trunct_loc:
-          label_context[d] = args.mpnet_smoothness_trunct_value
+        value = label_context[d]
+
+        if args.mpnet_smoothness_trunct_loc >= 0:
+          if d >= args.mpnet_smoothness_trunct_loc:
+            label_context[d] = min(value, args.mpnet_smoothness_trunct_value)
+        else:
+          label_context[d] = min(value, args.mpnet_smoothness_trunct_value)
 
   label_context = torch.from_numpy(label_context)
   label_context = label_context * args.mpnet_term_weight
