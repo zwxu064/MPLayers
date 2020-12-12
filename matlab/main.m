@@ -4,7 +4,7 @@ clc;
 
 marker_order = struct('SGM', 1, 'MF', 2, 'ISGMR', 3, 'TRWP', 4, 'TRWS', 5);
 
-img = "000002_11";
+img = "tsukuba";
 markers = {'-+','-o','-*','-.','-x','-s','-d','-^','-v','->','-<','-p','-h'};
 save_dir = fullfile('../experiments', char(img));
 enable_block_minAdir = false;
@@ -71,7 +71,13 @@ for idx = 1 : n_img
     pairwise_cost = single(obj.label_context);
     seg_all = obj.seg_all;
     n_disp = size(unary_cost, 3);
-
+    seg_size = size(seg_all);
+    
+    if length(seg_size) == 2
+      n_iter = 1;
+      seg_all = reshape(seg_all, seg_size(1), seg_size(2), 1);
+    end
+    
     for iter = 1 : n_iter
       seg = seg_all(:, :, iter);
       energy.(clean_name)(end+1) = ...
