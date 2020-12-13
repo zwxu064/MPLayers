@@ -1,15 +1,25 @@
 # Related Publication
 
-  This work is accepted as an oral paper by ACCV 2020. If you find our paper or code useful, please cite our work as follows.
+  This work is accepted as an oral paper by ACCV 2020.
 
   [**"Fast and Differentiable Message Passing on Pairwise Markov Random Fields"**](https://arxiv.org/abs/1910.10892) (Oral)\
   Zhiwei Xu, Thalaiyasingam Ajanthan, Richard Hartley\
   Asian Conference on Computer Vision (ACCV), November 2020, Japan
+  
+  If you find our paper or code useful, please cite our work as follows.
+  ```
+  @article{xu2020mplayers,
+  title={Fast and Differentiable Message Passing on Pairwise Markov Random Fields},
+  author={Zhiwei Xu and Thalaiyasingam Ajanthan and Richard Hartley},
+  journal={Asian Conference on Computer Vision},
+  year={2020}
+  }
+  ```
 
 # Requirements
   To compile MP Layers, please do as follows
   
-  - Install opencv for C++, opencv3.4.3 in our case, then set "[path]" for MP layers (ours is in "./MPLayers/compile.sh") in **~/.bashrc** by
+  - Install OpenCV for C++, OpenCV3.4.3 in our case, then set "[path]" for MP layers (ours is in "./MPLayers/compile.sh") in **~/.bashrc** by
     ```
     export PYTHONPATH=[path]/MPLayers:[path]/MPLayers/Stereo:[path]/MPLayers/Segmentation:$PYTHONPATH$;
     source ~/.bashrc;
@@ -17,12 +27,12 @@
 
   - Edit files as follows
 
-    In **"./MPLayers/compile.sh"** and **"./MPLayers_soft/cuda/compile.sh"**, set the "[path]" by
+    In **"./MPLayers/compile.sh"**, set the "[path]" by
     ```
     python setup.py --mode="stereo" develop --install-dir=[path]/MPLayers  # while mode: "stereo"|"segmentation"
     ```
 
-    In **"./MPLayers/setup.py"** and **"./MPLayers_soft/cuda/setup.py"**,
+    In **"./MPLayers/setup.py"**,
     ```
     REPLACE
         include_dir = ['aux', '../tools/cpp',
@@ -34,14 +44,12 @@
                        '/apps/opencv/3.4.3/lib64']
     BY
         include_dir = ['aux', '../tools/cpp',
-                       '[opencv path]/include',
-                       '[opencv path]/include/opencv']
-        library_dir = ['[opencv path]/lib',
-                       '[opencv path]/lib64']
+                       '[OpenCV path]/include',
+                       '[OpenCV path]/include/opencv']
+        library_dir = ['[OpenCV path]/lib',
+                       '[OpenCV path]/lib64']
     ```
   - Start compiling for MPLayer libraries (will be stored in "lib_stere_slim" and "lib_seg_slim") by running
-    
-    For ISGMR,
     ```
     cd MPLayers;
     set --mode="stereo" in compile.sh;
@@ -52,16 +60,6 @@
     ./compile.sh
     ```
 
-    For TRWP,
-    ```
-    cd MPLayers_soft/cuda;
-    set --mode="stereo" in compile.sh;
-    ./compile.sh;
-    
-    When it is finished
-    set --mode="segmentation" in compile.sh;
-    ./compile.sh
-    ```
 To run deep semantic segmentation, please install
   
   ```
@@ -74,12 +72,16 @@ To run deep semantic segmentation, please install
   eigen/3.2.9
   ```
 
-# Difference between MPLayers and MPLayers_soft
+# Library
   
-  MPLayers contains MAP TRWP (TRWP) and MAP ISGMR (ISGMR), but TRWP will not be used.
+  In either "./MPLayers/lib_seg" or "./MPLayers/lib_stereo", it contains libraries of "TRWP", "ISGMR", "TRWP_hard_soft", and "compute_terms".
   
-  MPLayers_soft contains MAP and marginal TRWP (TRWP_hard_soft) but soft TRWP was not used in our paper; ISGMR is not compiled in MPLayers_soft.
-
+  ```
+  TRWP: MAP TRWP used in our paper.
+  ISGMR: MAP ISGMR used in our paper.
+  TRWP_hard_soft: MAP and marginal TRWP although marginal TRWP was not used in our paper.
+  compute_terms: only used for stereo unary terms via OpenCV.
+  ```
 
 # How to Use
 
@@ -118,8 +120,8 @@ To run deep semantic segmentation, please install
       
   - To train using "train.sh"
     ```
-    set --resume_unary="pretrained/vanilla/model.pth.tar" in the command for "--mpnet_mrf_mode" in ["TRWP", "ISGMR", "SGM", "MeanField"]
-    remove "--resume_unary" from the command for --mpnet_mrf_mode="vanilla"
+    set --resume_unary="pretrained/vanilla/model.pth.tar" if "--mpnet_mrf_mode" in ["TRWP", "ISGMR", "SGM", "MeanField"]
+    remove "--resume_unary" if --mpnet_mrf_mode="vanilla"
     ./train.sh
     ```
   
