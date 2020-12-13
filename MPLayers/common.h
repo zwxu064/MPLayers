@@ -12,7 +12,7 @@
 
 // Define MAX_DISPARITY in setup_*.py for stereo and segmentation
 // #define MAX_DISPARITY 32  // set 32 for segmentation (21 classes) or 64 for stereo for (48 disparisities)
-#define MAX_THREADS_PER_BLOCK 256
+#define MAX_THREADS_PER_BLOCK 1024  // 256
 #define MAX_BLOCKS_PER_GRID 65535
 #define WARP_SIZE 32
 #define MAX_WARP_GROUP ((MAX_DISPARITY + WARP_SIZE - 1) / WARP_SIZE)
@@ -20,6 +20,8 @@
 #define FULL_MASK 0xffffffff
 #define USE_MSGNORM_NAIVE
 // #define CUDA_ERROR_CHECK
+#define MAX_PARALLEL_DISPS ((MAX_THREADS_PER_BLOCK) / WARP_SIZE)  // for shared mem
+#define MAX_SHARED_MEM_PER_BLOCK MAX_THREADS_PER_BLOCK
 
 struct Param {
   Param(uint n_dir, uint batch, uint n_cv, uint height, uint width, uint n_disp,

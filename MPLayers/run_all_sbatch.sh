@@ -8,12 +8,12 @@ p_weights=(20 10 50 10 4 10 10 10 10 10 25 5)
 modes=("SGM" "ISGMR" "TRWP" "MeanField")  # SGM needs longer time since it is CPU
 n_dirs=(4 8 16)
 
-#img_names=("teddy")
-#p_funcs=("TL")
-#n_disps=(60)
-#truncs=(1)
-#p_weights=(10)
-#modes=("TRWP")
+#img_names=("teddy" "penguin")
+#p_funcs=("TL" "TQ")
+#n_disps=(60 256)
+#truncs=(1 200)
+#p_weights=(10 25)
+#modes=("ISGMR" "TRWP")
 #n_dirs=(4 16)
 
 enable_min_a_dirs=(false)

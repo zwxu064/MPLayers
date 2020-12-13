@@ -55,21 +55,19 @@ setup(name='compute_terms',
                                            'opencv_imgcodecs'])],
       cmdclass={'build_ext': BuildExtension})
 
+extra_compile_args = {'nvcc': ['-O3', '-arch=sm_35', '--expt-relaxed-constexpr'],
+                      'cxx': ['-g', '-std=c++11', '-Wno-deprecated-declarations', '-fopenmp']}
+define_macros = [('TORCH_VERSION_MAJOR', torch_version_major),
+                 ('MAX_DISPARITY', MAX_DISPARITY)]
+
 if not enable_cuda:
   setup(name='ISGMR',
         ext_modules=[CppExtension(name='ISGMR',
                                   sources=['ISGMR/ISGMR.cpp',
                                            'common.cpp',
                                            '../tools/cpp/utils.cpp'],
-                                  extra_compile_args={'nvcc': ['-O3',
-                                                               '-arch=sm_35',
-                                                               '--expt-relaxed-constexpr'],
-                                                      'cxx': ['-g',
-                                                              '-std=c++11',
-                                                              '-Wno-deprecated-declarations',
-                                                              '-fopenmp']},
-                                  define_macros=[('TORCH_VERSION_MAJOR', torch_version_major),
-                                                 ('MAX_DISPARITY', MAX_DISPARITY)],
+                                  extra_compile_args=extra_compile_args,
+                                  define_macros=define_macros,
                                   undef_macros=['USE_CUDA'])],
         cmdclass={'build_ext': BuildExtension},
         include_dirs=['.', '../tools/cpp'])
@@ -79,19 +77,13 @@ if not enable_cuda:
                                   sources=['TRWP/TRWP.cpp',
                                            'common.cpp',
                                            '../tools/cpp/utils.cpp'],
-                                  extra_compile_args={'nvcc': ['-O3',
-                                                               '-arch=sm_35',
-                                                               '--expt-relaxed-constexpr'],
-                                                      'cxx': ['-g',
-                                                              '-std=c++11',
-                                                              '-Wno-deprecated-declarations',
-                                                              '-fopenmp']},
-                                  define_macros=[('TORCH_VERSION_MAJOR', torch_version_major),
-                                                 ('MAX_DISPARITY', MAX_DISPARITY)],
+                                  extra_compile_args=extra_compile_args,
+                                  define_macros=define_macros,
                                   undef_macros=['USE_CUDA'])],
         cmdclass={'build_ext': BuildExtension},
         include_dirs=['.', '../tools/cpp'])
 else:
+  define_macros += [('USE_CUDA', None)]
   setup(name='ISGMR',
         ext_modules=[CUDAExtension(name='ISGMR',
                                    sources=['ISGMR/ISGMR.cpp',
@@ -100,16 +92,8 @@ else:
                                             'ISGMR/ISGMR_backward.cu',
                                             '../tools/cpp/utils.cpp',
                                             '../tools/cuda/cudaUtils.cu'],
-                                   extra_compile_args={'nvcc': ['-O3',
-                                                                '-arch=sm_35',
-                                                                '--expt-relaxed-constexpr'],
-                                                       'cxx': ['-g',
-                                                               '-std=c++11',
-                                                               '-Wno-deprecated-declarations',
-                                                               '-fopenmp']},
-                                   define_macros=[('USE_CUDA', None),
-                                                  ('TORCH_VERSION_MAJOR', torch_version_major),
-                                                  ('MAX_DISPARITY', MAX_DISPARITY)],
+                                   extra_compile_args=extra_compile_args,
+                                   define_macros=define_macros,
                                    undef_macros=[])],
         cmdclass={'build_ext': BuildExtension},
         include_dirs=['.', '../tools/cpp', '../tools/cuda'])
@@ -122,21 +106,31 @@ else:
                                             'TRWP/TRWP_backward.cu',
                                             '../tools/cpp/utils.cpp',
                                             '../tools/cuda/cudaUtils.cu'],
-                                   extra_compile_args={'nvcc': ['-O3',
-                                                                '-arch=sm_35',
-                                                                '--expt-relaxed-constexpr'],
-                                                       'cxx': ['-g',
-                                                               '-std=c++11',
-                                                               '-Wno-deprecated-declarations',
-                                                               '-fopenmp']},
-                                   define_macros=[('USE_CUDA', None),
-                                                  ('TORCH_VERSION_MAJOR', torch_version_major),
-                                                  ('MAX_DISPARITY', MAX_DISPARITY)],
+                                   extra_compile_args=extra_compile_args,
+                                   define_macros=define_macros,
                                    undef_macros=[])],
         cmdclass={'build_ext': BuildExtension},
         include_dirs=['.', '../tools/cpp', '../tools/cuda'])
 
-target_dir = 'lib_stereo_slim' if (args.mode == 'stereo') else 'lib_seg_slim'
+  define_macros += [('USE_HARD', None),('USE_SOFT', None)]
+  setup(name='TRWP_hard_soft',
+        ext_modules=[CUDAExtension(name='TRWP_hard_soft',
+                                   sources=['TRWP_hard_soft/TRWP.cpp',
+                                            'common.cpp',
+                                            '../tools/cpp/utils.cpp',
+                                            '../tools/cuda/cudaUtils.cu',
+                                            'TRWP_hard_soft/TRWP_forward.cu',
+                                            'TRWP_hard_soft/TRWP_backward.cu',
+                                            'TRWP_hard_soft/TRWP_forward_soft.cu',
+                                            'TRWP_hard_soft/TRWP_backward_soft.cu',
+                                            'TRWP_hard_soft/TRWP_swbp.cu'],
+                                   extra_compile_args=extra_compile_args,
+                                   define_macros=define_macros,
+                                   undef_macros=[])],
+        cmdclass={'build_ext': BuildExtension},
+        include_dirs=['.', '../tools/cpp', '../tools/cuda'])
+
+target_dir = 'lib_stereo' if (args.mode == 'stereo') else 'lib_seg'
 if not os.path.exists(target_dir):
   os.mkdir(target_dir)
 
@@ -150,3 +144,6 @@ for file in glob.glob('*.so') + glob.glob('*.egg-info'):
       shutil.rmtree(file_path)
 
   shutil.move(file, target_dir)
+
+if os.path.exists('build'):
+  shutil.rmtree('build')  # clear history

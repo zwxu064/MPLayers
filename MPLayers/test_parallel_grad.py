@@ -7,7 +7,7 @@ sys.path.append('../pytorch')
 from message_passing import MessagePassingModule
 from MP_module import MPModule
 from MP_module_manual import test_mp_module_manual
-# from lib_stereo_slim import ISGMR
+# from lib_stereo import ISGMR
 
 os.environ["CUDA_VISIBLE_DEVICES"]="3"
 torch.manual_seed(2019)

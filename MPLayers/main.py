@@ -157,7 +157,7 @@ if __name__ == '__main__':
     save_dir = '{}/energy/{}'.format(args.save_dir, args.img_name)
 
     if not os.path.exists(save_dir):
-      os.mkdir(save_dir)
+      os.makedirs(save_dir)
 
     file_path = os.path.join(save_dir, '{}_{}_iter_{}_{}_trunc_{}_dir_{}_rho_{}' \
                              .format(img_name, mode, n_iter, context, truncated,

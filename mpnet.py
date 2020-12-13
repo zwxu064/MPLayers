@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 import scipy.io as scio
 from modeling.sync_batchnorm.batchnorm import SynchronizedBatchNorm2d
 from modeling.deeplab import DeepLab
-from pytorch.MP_module import MPModule as MPModule_TRWP
-from MPLayers.MP_module import MPModule as MPModule_ISGMR
+from pytorch.MP_module_hard_soft import MPModule as MPModule_TRWP
+from pytorch.MP_module import MPModule as MPModule_ISGMR
 from utils.model_init import init_params
 from utils.edge_weights import getEdgeShift
 from mean_field import MeanField

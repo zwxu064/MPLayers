@@ -6,7 +6,7 @@ marker_order = struct('SGM', 1, 'MF', 2, 'ISGMR', 3, 'TRWP', 4, 'TRWS', 5);
 
 img = "tsukuba";
 markers = {'-+','-o','-*','-.','-x','-s','-d','-^','-v','->','-<','-p','-h'};
-save_dir = fullfile('../experiments', char(img));
+save_dir = fullfile('../experiments/energy', char(img));
 enable_block_minAdir = false;
 checkDir(save_dir);
 force_4_energy_connection = false;

@@ -7,7 +7,7 @@ if (int(sp_version[0]) >= 1) and (int(sp_version[1]) >= 3):
   from imageio import imread
 else:
   from scipy.misc import imread
-from lib_stereo_slim import compute_terms
+from lib_stereo import compute_terms
 
 
 class MRFParams():
