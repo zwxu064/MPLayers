@@ -11,7 +11,7 @@
   @article{xu2020mplayers,
   title={Fast and Differentiable Message Passing on Pairwise Markov Random Fields},
   author={Zhiwei Xu, Thalaiyasingam Ajanthan, and Richard Hartley},
-  journal={Asian Conference on Computer Vision},
+  journal={Asian Conference on Cofmputer Vision},
   year={2020}
   }
   ```
@@ -107,7 +107,7 @@ To run deep semantic segmentation, please install
 **Deep Semantic Segmentation**
 
   - Dataset: Download Berkeley benchmark and PASCAL VOC 2012 using the scripts from ["./data/"](https://github.com/meng-tang/rloss.git), put the merged datasets as "./datasets/pascal_scribble" (although ours is for fully-supervised learning).
-    It should contains folders such as "ImageSets", "JPEGImages", "SegmentationClassAug", etc.
+    It should contain folders such as "ImageSets", "JPEGImages", "SegmentationClassAug", etc.
   
   - Ensure folders of "datasets", "experiments", and "pretrained" exist.
     Then, download [our models](https://1drv.ms/u/s!AngC1-tRlyPMgRx6ahmhqxqJDf65?e=UQRUBN) and stored in each subfolder, e.g., "pretrained/TRWP/model.pth.tar".
