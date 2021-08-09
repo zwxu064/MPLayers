@@ -60,7 +60,7 @@ def test_mp_module(mode, n_iter, unary, n_dir, label_context):
 
   unary_score = -unary.unsqueeze(0)
   img = torch.randint(0, 1, (batch, 3, h, w), dtype=torch.float32, device=device)
-  unary_prob, pairwise_prob, message, message_init, label_context = mp_module.forward(unary_score, img)
+  unary_prob, pairwise_prob, message, message_init, label_context, _, _ = mp_module.forward(unary_score, img)
 
   if enable_backward:
     loss = unary_prob.sum()
@@ -153,7 +153,7 @@ if __name__ == '__main__':
     h, w = param.height, param.width
 
   # ==== Save file path
-  if True:  # enable_saving_label:
+  if enable_saving_label:
     save_dir = '{}/energy/{}'.format(args.save_dir, args.img_name)
 
     if not os.path.exists(save_dir):
@@ -319,7 +319,7 @@ if __name__ == '__main__':
     torch.cuda.empty_cache()
 
     # ==== Save for energy
-    if True:
+    if enable_saving_label:
       scio.savemat(file_path, {'n_iter': n_iter,
                                'n_dir': n_dir,
                                'rho': rho,

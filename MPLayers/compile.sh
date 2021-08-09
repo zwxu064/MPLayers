@@ -2,7 +2,7 @@
 # change the path in "--install-dir" to your path and add it in your ~/.bashrc as a PYTHONPATH
 # mode: 'stereo' or 'segmentation' or None
 python setup.py develop --mode="stereo" --install-dir=/home/users/u5710355/Install/MPLayers
-#python setup.py develop --mode="segmetation" --install-dir=/home/users/u5710355/Install/MPLayers
+#python setup.py develop --mode="segmentation" --install-dir=/home/users/u5710355/Install/MPLayers
 
 # Data61
 #module load intel-mkl/2017.2.174 intel-cc/17.0.2.174 intel-fc/17.0.2.174 caffe/0.16.6
