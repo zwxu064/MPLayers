@@ -11,7 +11,7 @@
   @article{xu2020mplayers,
   title={Fast and Differentiable Message Passing on Pairwise Markov Random Fields},
   author={Zhiwei Xu, Thalaiyasingam Ajanthan, and Richard Hartley},
-  journal={Asian Conference on Cofmputer Vision},
+  journal={Asian Conference on Computer Vision},
   year={2020}
   }
   ```
