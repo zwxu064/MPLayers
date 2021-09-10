@@ -288,6 +288,7 @@ __global__ void DiagonalKernelWideBack(const Param param,
 }
 
 void BackwardCUDA(const bool enable_sgm,
+                  const int sgm_single_mode,
                   const float rho,
                   const at::Tensor context,
                   const at::Tensor edge_weights,
@@ -301,7 +302,7 @@ void BackwardCUDA(const bool enable_sgm,
                   at::Tensor dunary_update,
                   at::Tensor dmsg_update) {
   const uint n_iter = msg_min_index.size(0);
-  const uint n_dir = msg_min_index.size(1);
+  uint n_dir = msg_min_index.size(1);
   const uint batch = msg_min_index.size(2);
   const uint n_cv = msg_min_index.size(3);
   const uint height = msg_min_index.size(4);
@@ -320,6 +321,9 @@ void BackwardCUDA(const bool enable_sgm,
   float* dmsg_update_ptr = dmsg_update.data<float>();  // (n_dir,batch,n_cv,h,w,n_disp)
   uint n_thread_a_tree = GetNumThreadATree(n_disp, WARP_SIZE);
   bool is_training = true, is_backward = true;
+  bool enable_sgm_single_dir = sgm_single_mode >= 0 ? true : false;
+
+  if (enable_sgm_single_dir) n_dir = 1;
 
   std::vector<float*> dmsg_update_address(n_dir), edge_weight_address(n_dir), dedge_weight_address(n_dir);
   std::vector<uchar*> msg_min_index_address(n_dir), msg_norm_index_address(n_dir);
@@ -338,8 +342,11 @@ void BackwardCUDA(const bool enable_sgm,
     edge_weight_address[dir] = edge_weight_ptr + dir * msg_norm_size;
     dedge_weight_address[dir] = dedge_weight_ptr + dir * msg_norm_size;
     dmsg_update_address[dir] = dmsg_update_ptr + dir * msg_min_size;
-    Param param(n_dir, batch, n_cv, height, width, n_disp, dir, rho, is_backward, is_training);
+    uint dir_actual = enable_sgm_single_dir ? sgm_single_mode : dir;
+    Param param(n_dir, batch, n_cv, height, width, n_disp, dir_actual, rho, is_backward, is_training);
     UpdateParam(&param);
+    param.dir = enable_sgm_single_dir ? 0 : dir;
+    param.dir_inv = enable_sgm_single_dir ? 1 : param.dir_inv;
     param_list.push_back(param);
   }
 
@@ -359,8 +366,10 @@ void BackwardCUDA(const bool enable_sgm,
     cudaMemset(dmsg_ptr, 0, msg_min_index_size * sizeof(float));
 
     // Diagonal
-    uint n_dir_dia = min(16, n_dir);
-    for (int dir = n_dir_dia - 1; dir >= 4; --dir) {
+    int n_dir_dia = enable_sgm_single_dir ? 16 : min(16, n_dir);
+    for (int idx = n_dir_dia - 1; idx >= 4; --idx) {
+      if (enable_sgm_single_dir && idx != sgm_single_mode) continue;
+      uint dir = enable_sgm_single_dir ? 0 : idx;
       uint h_step_abs = std::abs(param_list[dir].h_step), w_step_abs = std::abs(param_list[dir].w_step);
       uint n_threads = batch * n_cv * param_list[dir].n_trees * n_thread_a_tree;
       uint n_blocks = GetNumBlock(n_threads, n_thread_a_tree);
@@ -410,8 +419,10 @@ void BackwardCUDA(const bool enable_sgm,
     }
 
     // Vertical
-    uint n_dir_ver = min(4, n_dir);
-    for (int dir = n_dir_ver - 1; dir >= 2; --dir) {
+    int n_dir_ver = enable_sgm_single_dir ? 4 : min(4, n_dir);
+    for (int idx = n_dir_ver - 1; idx >= 2; --idx) {
+      if (enable_sgm_single_dir && idx != sgm_single_mode) continue;
+      uint dir = enable_sgm_single_dir ? 0 : idx;
       uint n_threads = batch * n_cv * param_list[dir].n_trees * n_thread_a_tree;
       uint n_blocks = GetNumBlock(n_threads, n_thread_a_tree);
       DiagonalKernelWideBack<<<n_blocks, n_thread_a_tree>>>(param_list[dir],
@@ -445,8 +456,10 @@ void BackwardCUDA(const bool enable_sgm,
     }
 
     // Horizontal
-    uint n_dir_hor = min(2, n_dir);
-    for (int dir = n_dir_hor - 1; dir >= 0; --dir) {
+    int n_dir_hor = enable_sgm_single_dir ? 2 : min(2, n_dir);
+    for (int idx = n_dir_hor - 1; idx >= 0; --idx) {
+      if (enable_sgm_single_dir && idx != sgm_single_mode) continue;
+      uint dir = enable_sgm_single_dir ? 0 : idx;
       uint n_threads = batch * n_cv * param_list[dir].n_trees * n_thread_a_tree;
       uint n_blocks = GetNumBlock(n_threads, n_thread_a_tree);
       HorizontalKernelBack<<<n_blocks, n_thread_a_tree>>>(param_list[dir],

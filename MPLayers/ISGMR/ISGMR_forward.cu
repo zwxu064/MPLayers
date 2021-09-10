@@ -431,6 +431,7 @@ __global__ void DiagonalKernelWide(const Param param,
 }
 
 void ForwardCUDA(const bool enable_sgm,
+                 const int sgm_single_mode,
                  const float rho,
                  const int n_iter,
                  const bool enable_min_a_dir,
@@ -444,7 +445,7 @@ void ForwardCUDA(const bool enable_sgm,
                  at::Tensor unary_update,
                  at::Tensor msg_update,
                  at::Tensor label_all) {
-  const uint n_dir = msg.size(0);
+  uint n_dir = msg.size(0);
   const uint batch = msg.size(1);
   const uint n_cv = msg.size(2);
   const uint height = msg.size(3);
@@ -464,6 +465,9 @@ void ForwardCUDA(const bool enable_sgm,
   bool is_training = msg_min_index.size(0) == 0 ? false : true;
   bool is_backward = false;
   bool enable_cal_label = label_all.size(0) == 0 ? false : true;
+  bool enable_sgm_single_dir = sgm_single_mode >= 0 ? true : false;
+
+  if (enable_sgm_single_dir) n_dir = 1;
 
   // if (enable_sgm) {
   //   printf("Error!!! CUDA version does not support SGM but ISGMR.\n");
@@ -495,9 +499,12 @@ void ForwardCUDA(const bool enable_sgm,
     edge_weight_address[dir] = edge_weight_ptr + dir * msg_norm_size;
     msg_min_index_address[dir] = nullptr;
     msg_norm_index_address[dir] = nullptr;
-    Param param(n_dir, batch, n_cv, height, width, n_disp, dir, rho, is_backward, is_training);
+    uint dir_actual = enable_sgm_single_dir ? sgm_single_mode : dir;
+    Param param(n_dir, batch, n_cv, height, width, n_disp, dir_actual, rho, is_backward, is_training);
     param.enable_min_a_dir = enable_min_a_dir;
     UpdateParam(&param);
+    param.dir = enable_sgm_single_dir ? 0 : param.dir;
+    param.dir_inv = enable_sgm_single_dir ? 1 : param.dir_inv;
     param_list.push_back(param);
   }
 
@@ -512,8 +519,10 @@ void ForwardCUDA(const bool enable_sgm,
     }
 
     // Horizontal
-    uint n_dir_hor = min(2, n_dir);
-    for (uint dir = 0; dir < n_dir_hor; ++dir) {
+    uint n_dir_hor = enable_sgm_single_dir ? 2 : min(2, n_dir);
+    for (uint idx = 0; idx < n_dir_hor; ++idx) {
+      if (enable_sgm_single_dir && idx != sgm_single_mode) continue;
+      uint dir = enable_sgm_single_dir ? 0 : idx;
       UpdateUnaryKernel<<<n_block_unary, n_thread_unary>>>(param_list[dir],
                                                            msg_min_size,
                                                            unary_ptr,
@@ -543,8 +552,10 @@ void ForwardCUDA(const bool enable_sgm,
     }
 
     // Vertical
-    uint n_dir_ver = min(4, n_dir);
-    for (uint dir = 2; dir < n_dir_ver; ++dir) {
+    uint n_dir_ver = enable_sgm_single_dir ? 4 : min(4, n_dir);
+    for (uint idx = 2; idx < n_dir_ver; ++idx) {
+      if (enable_sgm_single_dir && idx != sgm_single_mode) continue;
+      uint dir = enable_sgm_single_dir ? 0 : idx;
       UpdateUnaryKernel<<<n_block_unary, n_thread_unary>>>(param_list[dir],
                                                            msg_min_size,
                                                            unary_ptr,
@@ -574,8 +585,10 @@ void ForwardCUDA(const bool enable_sgm,
     }
 
     // Diagonal
-    uint n_dir_dia = min(16, n_dir);
-    for (uint dir = 4; dir < n_dir_dia; ++dir) {
+    uint n_dir_dia = enable_sgm_single_dir ? 16 : min(16, n_dir);
+    for (uint idx = 4; idx < n_dir_dia; ++idx) {
+      if (enable_sgm_single_dir && idx != sgm_single_mode) continue;
+      uint dir = enable_sgm_single_dir ? 0 : idx;
       UpdateUnaryKernel<<<n_block_unary, n_thread_unary>>>(param_list[dir],
                                                            msg_min_size,
                                                            unary_ptr,

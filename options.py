@@ -83,6 +83,7 @@ def set_config():
   parser.add_argument('--mpnet_term_weight', type=float, default=None, help='term weight')
   parser.add_argument('--mpnet_smoothness_train', type=str, default='', choices={'on', 'softmax', 'sigmoid', ''})
   parser.add_argument('--mpnet_enable_soft', action='store_true', default=False, help='enable soft bp')
+  parser.add_argument('--mpnet_enable_sgm_single', action='store_true', default=False, help='enable sgm single mode')
 
   # Edge weights
   parser.add_argument('--mpnet_scale_list', nargs='+', type=float, default=0.5, help='scale list for edge weights')

@@ -93,14 +93,18 @@ class ISGMRFunction(torch.autograd.Function):
     batch, cv, h, w, n_disp = unary.size()
     rho, n_iter, n_dir, is_training = args.rho, args.mpnet_max_iter, args.mpnet_n_dirs, args.training
     ISGMR = ISGMR_seg if (n_disp == 21) else ISGMR_stereo
+    n_dir_msg = n_dir
 
-    message = unary.new_zeros(n_dir, batch, cv, h, w, n_disp)
+    if args.sgm_single_mode >= 0:
+      n_iter, n_dir, n_dir_msg = 1, 1, 2  # n_dir_msg=2 for dir_inv in param in CUDA
+
+    message = unary.new_zeros(n_dir_msg, batch, cv, h, w, n_disp)
     cost_final = unary.new_zeros(batch, cv, h, w, n_disp)
     unary_tmp = unary.new_zeros(batch, cv, h, w, n_disp)
-    message_tmp = unary.new_zeros(n_dir, batch, cv, h, w, n_disp)
+    message_tmp = unary.new_zeros(n_dir_msg, batch, cv, h, w, n_disp)
 
     if is_training:
-      message_index = unary.new_zeros(n_iter, n_dir, batch, cv, h, w, n_disp, dtype=torch.uint8)
+      message_index = unary.new_zeros(n_iter, n_dir_msg, batch, cv, h, w, n_disp, dtype=torch.uint8)
       cost_index = unary.new_zeros(n_iter, n_dir, batch, cv, h, w, dtype=torch.uint8)
     else:
       message_index = torch.empty(0, dtype=torch.uint8)
@@ -117,10 +121,10 @@ class ISGMRFunction(torch.autograd.Function):
     else:
       enable_edge_weights = True
 
-    ISGMR.forward(int(args.enable_sgm), rho, int(n_iter), int(args.enable_min_a_dir),
+    ISGMR.forward(int(args.enable_sgm), int(args.sgm_single_mode), rho, int(n_iter), int(args.enable_min_a_dir),
                   unary, label_context, edge_weights, message, cost_final, message_index,
                   cost_index, unary_tmp, message_tmp, label_all)
-    ctx.intermediate_results = args.enable_sgm, rho, message_index, cost_index, label_context, \
+    ctx.intermediate_results = args.enable_sgm, args.sgm_single_mode, rho, message_index, cost_index, label_context, \
                                edge_weights, enable_edge_weights
 
     del message, message_index, cost_index, unary_tmp, message_tmp, label_context, edge_weights
@@ -128,18 +132,22 @@ class ISGMRFunction(torch.autograd.Function):
 
   @staticmethod
   def backward(ctx, dcost_final, dmessage_all):
-    enable_sgm, rho, message_index, cost_index, label_context, edge_weights, enable_edge_weights \
+    enable_sgm, sgm_single_mode, rho, message_index, cost_index, label_context, edge_weights, enable_edge_weights \
       = ctx.intermediate_results
     del ctx.intermediate_results
 
     dcost_final = dcost_final.contiguous()
     n_iter, n_dir, batch, cv, h, w, n_disp = message_index.size()
     ISGMR = ISGMR_seg if (n_disp == 21) else ISGMR_stereo
+    n_dir_msg = n_dir
+
+    if sgm_single_mode >= 0:
+      n_iter, n_dir, n_dir_msg = 1, 1, 2  # n_dir_msg=2 for dir_inv in param in CUDA
 
     dunary = dcost_final.new_zeros(batch, cv, h, w, n_disp)
-    dmessage = dcost_final.new_zeros(n_dir, batch, cv, h, w, n_disp)
+    dmessage = dcost_final.new_zeros(n_dir_msg, batch, cv, h, w, n_disp)
     dunary_tmp = dcost_final.new_zeros(batch, cv, h, w, n_disp)
-    dmessage_tmp = dcost_final.new_zeros(n_dir,batch, cv, h, w, n_disp)
+    dmessage_tmp = dcost_final.new_zeros(n_dir_msg, batch, cv, h, w, n_disp)
     dedge_weights = dcost_final.new_zeros(n_dir, batch, cv, h, w)
 
     enable_seg = (n_disp == 21)
@@ -148,7 +156,7 @@ class ISGMRFunction(torch.autograd.Function):
     else:
       dlabel_context = dcost_final.new_zeros(n_disp)
 
-    ISGMR.backward(int(enable_sgm), rho, label_context, edge_weights, dcost_final, message_index,
+    ISGMR.backward(int(enable_sgm), int(sgm_single_mode), rho, label_context, edge_weights, dcost_final, message_index,
                    cost_index, dunary, dlabel_context, dedge_weights, dmessage,
                    dunary_tmp, dmessage_tmp)
 
@@ -223,12 +231,27 @@ class MPModule(torch.nn.Module):
 
     self.args.training = self.training
     if self.args.mpnet_mrf_mode in {'ISGMR', 'SGM'}:
-      cost_final, cost_all = ISGMRFunction.apply(unary, label_context, edge_weights, self.args)
+      if self.args.mpnet_enable_sgm_single and (self.args.mpnet_mrf_mode == 'ISGMR'):
+        cost_final, cost_all = [], []
+
+        for dir_idx in range(self.args.mpnet_n_dirs):
+          self.args.sgm_single_mode = dir_idx
+          edge_weight_in = edge_weights[:, :, dir_idx : dir_idx + 1] if (edge_weights is not None) else None
+          cost_final_per, cost_all_per = ISGMRFunction.apply(unary,
+                                                             label_context,
+                                                             edge_weight_in,
+                                                             self.args)
+          cost_final.append(cost_final_per.permute(0, 1, 4, 2, 3).contiguous())
+          cost_all.append(cost_all_per.contiguous())
+      else:
+        self.args.sgm_single_mode = -1
+        cost_final, cost_all = ISGMRFunction.apply(unary, label_context, edge_weights, self.args)
     elif self.args.mpnet_mrf_mode == 'TRWP':
       cost_final, cost_all = TRWPFunction.apply(unary, label_context, edge_weights, self.args)
     else:
       assert False
 
-    cost_final = cost_final.permute(0, 1, 4, 2, 3).contiguous()
+    cost_final = cost_final.permute(0, 1, 4, 2, 3).contiguous() if not self.args.mpnet_enable_sgm_single else cost_final
     label_context = label_context.unsqueeze(0)  # Create batch
+
     return cost_final, label_context, cost_all, None, None

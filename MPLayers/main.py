@@ -1,6 +1,7 @@
 import torch, os, time, sys, copy, argparse, csv
 import scipy.io as scio
 import numpy as np
+import matplotlib.pyplot as plt
 sys.path.append('../pytorch')
 from message_passing import MessagePassingModule
 from MP_module import MPModule
@@ -90,6 +91,7 @@ if __name__ == '__main__':
   parser.add_argument('--left_img_path', type=str, default=None)
   parser.add_argument('--right_img_path', type=str, default=None)
   parser.add_argument('--save_dir', type=str, default='../experiments')
+  parser.add_argument('--enable_sgm_single', action='store_true', default=False, help='enable sgm single mode')
   args = parser.parse_args()
   img_name = args.img_name
   n_dir = args.n_dir
@@ -253,6 +255,7 @@ if __name__ == '__main__':
       mp_module.set_label_context(label_context_cuda[0])
     else:
       args.mpnet_mrf_mode = mode
+      args.mpnet_enable_sgm_single = args.enable_sgm_single if (mode == 'ISGMR') else False
       args.rho = rho
       mp_module = MPModule(args,
                            enable_create_label_context=False,
@@ -286,14 +289,37 @@ if __name__ == '__main__':
         seg_all = torch.cat(seg_all, dim=0).squeeze(1).squeeze(1)
     else:
       # cost_final6:(1,1,n_disp,h,w); cost_all:(n_iter,1,1,h,w)
+      unary_cuda.requires_grad = True
+      mp_module.training = True
       results = mp_module(unary_cuda)
       cost_final6 = results[0]
       cost_all = results[2]
 
-      if (cost_all is not None) and (len(cost_all) > 0):
-        seg_all = cost_all.squeeze(1).squeeze(1)
+      if args.mpnet_enable_sgm_single:  # display when ISGMR single mode for each direction
+        # Fake loss to ensure the backward works
+        loss = 0
+        for cost_per_dir in cost_final6:
+          loss += cost_per_dir.sum()
+        loss.backward()
+
+        # Visualize the single direction results
+        plt.figure()
+        n_dirs = len(cost_final6)
+        count_row = int(np.sqrt(n_dirs))
+        count_col = (n_dirs + count_row - 1) // count_row
+
+        for count_idx, cost_per_dir in enumerate(cost_final6):
+          plt.subplot(count_row, count_col, count_idx + 1)
+          plt.imshow(cost_per_dir.squeeze().argmin(0).cpu().numpy())
+
+        plt.show()
+        print('!!!Enable SGM single direction mode, exit as finished.')
+        exit()
       else:
-        seg_all = cost_final6.squeeze()
+        if (cost_all is not None) and (len(cost_all) > 0):
+          seg_all = cost_all.squeeze(1).squeeze(1)
+        else:
+          seg_all = cost_final6.squeeze()
 
     cost_final6 = -cost_final6  # convert to fake prob
     torch.cuda.synchronize()

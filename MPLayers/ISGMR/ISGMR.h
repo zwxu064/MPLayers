@@ -46,6 +46,7 @@ void DiagonalWide(const Param param,
                   float* msg_update);
 
 void ForwardCPU(const bool enable_sgm,
+                const int sgm_single_mode,
                 const float rho,
                 const int n_iter,
                 const at::Tensor unary,
@@ -58,6 +59,7 @@ void ForwardCPU(const bool enable_sgm,
 
 #ifdef USE_CUDA
 void ForwardCUDA(const bool enable_sgm,
+                 const int sgm_single_mode,
                  const float rho,
                  const int n_iter,
                  const bool enable_min_a_dir,
@@ -73,6 +75,7 @@ void ForwardCUDA(const bool enable_sgm,
                  at::Tensor label_all);
 
 void BackwardCUDA(const bool enable_sgm,
+                  const int sgm_single_mode,
                   const float rho,
                   const at::Tensor context,
                   const at::Tensor edge_weights,
@@ -88,6 +91,7 @@ void BackwardCUDA(const bool enable_sgm,
 #endif
 
 void Forward(const int enable_sgm,
+             const int sgm_single_mode,
              const float rho,
              const int n_iter,
              const int enable_min_a_dir,
@@ -103,6 +107,7 @@ void Forward(const int enable_sgm,
              at::Tensor label_all);
 
 void Backward(const int enable_sgm,
+              const int sgm_single_mode,
               const float rho,
               const at::Tensor context,
               const at::Tensor edge_weights,
